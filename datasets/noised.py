@@ -74,7 +74,7 @@ class NoisedBayerDataset(datasets.ImageFolder):
         img1 = Image.fromarray((self.scaler*np.asarray(img1)).astype(np.uint8))
         img2 = self.noise_transform(img1) #.sum(axis=2, keepdims=True)
         path = os.path.relpath(img_path, self.root)
-        return 255*to_tensor(img2), 255*to_tensor(img1), class_id
+        return 255*to_tensor(img2), 255*to_tensor(img1), class_id, path
 
     
 class DemosaicDataset(torch.utils.data.Dataset):
@@ -386,44 +386,44 @@ class MSRMyDemosaicDataset(Dataset):
 #         return sample
 
     
-# class DemosaicDataset(torch.utils.data.Dataset):
-#     """Demosaic dataset."""
+class DemosaicDataset(torch.utils.data.Dataset):
+    """Demosaic dataset."""
 
-#     def __init__(self, root_dir, transform=None, pattern='bayer_rggb'):
-#         """
-#         Args:
-#             root_dir (string): Directory with all the images.
-#             transform (callable, optional): Optional transform to be applied
-#                 on a sample.
-#             selection_file (string) : file with image ids used for some purpose
-#                                       either train, validation or test
-#         """
-#         self.root_dir = root_dir
-#         self.transform = transform
-#         self.groundtruth = os.path.join(self.root_dir, 'gt/')
-#         self.bayer = os.path.join(self.root_dir, 'noised_bayer/')
+    def __init__(self, root_dir, transform=None, pattern='bayer_rggb'):
+        """
+        Args:
+            root_dir (string): Directory with all the images.
+            transform (callable, optional): Optional transform to be applied
+                on a sample.
+            selection_file (string) : file with image ids used for some purpose
+                                      either train, validation or test
+        """
+        self.root_dir = root_dir
+        self.transform = transform
+        self.groundtruth = os.path.join(self.root_dir, 'gt/')
+        self.bayer = os.path.join(self.root_dir, 'noised_bayer/')
         
-#         self.listfiles = []
-#         classes_folders = os.listdir(self.groundtruth)
-#         self.classes = dict(zip(classes_folders, range(len(classes_folders))))
+        self.listfiles = []
+        classes_folders = os.listdir(self.groundtruth)
+        self.classes = dict(zip(classes_folders, range(len(classes_folders))))
 
-#         for root, _, fnames in os.walk(self.groundtruth):
-#             for f in fnames:
-#                 self.listfiles.append(os.path.join(os.path.split(root)[1], f))
+        for root, _, fnames in os.walk(self.groundtruth):
+            for f in fnames:
+                self.listfiles.append(os.path.join(os.path.split(root)[1], f))
 
-#     def __len__(self):
-#         return len(self.listfiles)
+    def __len__(self):
+        return len(self.listfiles)
 
-#     def __getitem__(self, idx):
-#         label = self.classes[os.path.split(self.listfiles[idx])[0]]
+    def __getitem__(self, idx):
+        label = self.classes[os.path.split(self.listfiles[idx])[0]]
 
-#         img_name_gt = os.path.join(self.groundtruth, self.listfiles[idx])
-#         img_name_bayer = os.path.join(self.bayer, self.listfiles[idx])
+        img_name_gt = os.path.join(self.groundtruth, self.listfiles[idx])
+        img_name_bayer = os.path.join(self.bayer, self.listfiles[idx])
         
-#         bayer = Image.open(img_name_bayer)
-#         gt = Image.open(img_name_gt)
-#         if self.transform:
-#             bayer = self.transform(bayer)
-#             gt = self.transform(gt)
+        bayer = Image.open(img_name_bayer)
+        gt = Image.open(img_name_gt)
+        if self.transform:
+            bayer = self.transform(bayer)
+            gt = self.transform(gt)
 
-#         return 255*bayer, 255*gt, label
+        return 255*bayer, 255*gt, label

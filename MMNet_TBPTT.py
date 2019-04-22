@@ -205,9 +205,10 @@ class TBPTT_faceid(torch.nn.Module):
         denoiser_loss = self.loss_module(xcur, target)
         loss = (denoiser_loss + faceid_loss)/num_avg_batches
         if zero_grad:
-            self.optimizer.zero_grad()
-        self.optimizer.zero_grad()
-            # backprop last module (keep graph only if they ever overlap)
+            self.model.zero_grad()
+            self.faceid_model.zero_grad()
+            self.ArcMargin.zero_grad()
+        # backprop last module (keep graph only if they ever overlap)
         loss.backward(retain_graph=False)
         
         grads = []
@@ -229,7 +230,7 @@ class TBPTT_faceid(torch.nn.Module):
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip_grad)
         if make_step:
             self.optimizer.step()
-        self.optimizer.step()
+#         self.optimizer.step()
         
 #         self.model.zero_grad()
         return xcur, denoiser_grads, faceid_grads, arcmargin_grads, float(denoiser_loss), float(faceid_loss)
