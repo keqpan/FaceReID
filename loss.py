@@ -39,6 +39,11 @@ class AngleLoss(nn.Module):
 
         return loss
 
-def PSNR(imgs1, imgs2, PIXEL_MAX):
-    batch_size = imgs1.size(0)
-    return 10*torch.log10(PIXEL_MAX**2/((imgs1.reshape(batch_size, -1) - imgs2.reshape(batch_size, -1))**2).mean(-1))
+def PSNR(imgs, gt_imgs):
+    batch_size = imgs.size(0)
+    PIXEL_MAX = gt_imgs.reshape(batch_size, -1).max(-1)[0] #use groundtruth maximal pixel
+    return 10*torch.log10(PIXEL_MAX**2/((imgs.reshape(batch_size, -1) - gt_imgs.reshape(batch_size, -1))**2).mean(-1))
+    
+# def PSNR(imgs1, imgs2, PIXEL_MAX):
+#     batch_size = imgs1.size(0)
+#     return 10*torch.log10(PIXEL_MAX**2/((imgs1.reshape(batch_size, -1) - imgs2.reshape(batch_size, -1))**2).mean(-1))

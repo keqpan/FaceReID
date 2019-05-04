@@ -70,6 +70,26 @@ def srgb_to_linrgb(img):
     img[mask] = img[mask] / 12.92
     return img
 
+def generate_mask(im_shape, pattern='RGGB'):
+    if pattern == 'RGGB':
+        # pattern RGGB
+        r_mask = torch.zeros(im_shape)
+        r_mask[0::2, 0::2] = 1
+
+        g_mask = torch.zeros(im_shape)
+        g_mask[::2, 1::2] = 1
+        g_mask[1::2, ::2] = 1
+
+        b_mask = torch.zeros(im_shape)
+        b_mask[1::2, 1::2] = 1
+
+        mask = torch.zeros((3,) + im_shape)
+        mask[0, :, :] = r_mask
+        mask[1, :, :] = g_mask
+        mask[2, :, :] = b_mask
+        return mask
+
+
 def test_w_denoiser(model, denoiser, test_dataloader, l2dist):
     model.eval()
     denoiser.eval()
@@ -110,8 +130,22 @@ def test(model, dataloader, l2dist):
     for batch_idx, data in enumerate(dataloader):
         data_x, data_y, data_label = data
         batch_size = data_x.size(0)
-#         data_x = (data_x*255 - 127.5)/128
-#         data_y = (data_y*255 - 127.5)/128
+        data_x = M * data_x
+        data_y = M * data_y
+
+        data_x = linrgb_to_srgb(bilinear(data_x))
+        data_x = data_x/0.6
+#         data_x = data_x.clamp(0,1)
+        data_y = linrgb_to_srgb(bilinear(data_y))
+        data_y = data_y/0.6
+#         data_y = data_y.clamp(0,1)
+
+#         Image.fromarray((data_x[0] * 255).permute(1,2,0).numpy().clip(0,255).astype(np.uint8)).save("a.png")
+#         Image.fromarray((data_y[0] * 255).permute(1,2,0).numpy().clip(0,255).astype(np.uint8)).save("b.png")
+#         break
+
+        data_x = (data_x*255 - 127.5)/128
+        data_y = (data_y*255 - 127.5)/128
 
 #         imglist = [data_x.data.cpu().numpy(), data_x.data.cpu().numpy()[:,:,:,::-1], data_y.data.cpu().numpy(), data_y.data.cpu().numpy()[:,:,:,::-1]]
 
@@ -128,16 +162,11 @@ def test(model, dataloader, l2dist):
 #         labels_arr += data_label.data.cpu().numpy().tolist()
 
         faceid_input = torch.cat([data_x, data_y]).cuda()
-        faceid_input = linrgb_to_srgb(bilinear(faceid_input))
-        faceid_input = faceid_input/0.6
-#         Image.fromarray((faceid_input[0].permute(1,2,0).cpu().numpy()*255).astype(np.uint8)).save("a.png")
-#         break
-        faceid_input = (faceid_input*255 - 127.5)/128
         out = model(faceid_input)
         out_dists = l2dist(out[:batch_size], out[batch_size:])
         distances_arr += out_dists.detach().cpu().numpy().tolist()
         labels_arr += data_label.numpy().tolist()
-    print(batch_idx)
+    
     return np.asarray(distances_arr), np.asarray(labels_arr)
 
 def k_fold_eval(dists, labels):
@@ -146,7 +175,6 @@ def k_fold_eval(dists, labels):
     for pairs in KFold(n=6000, n_folds=10):
         train_pairs, test_pairs = pairs
         t, _ = find_best(thresholds, dists[train_pairs], labels[train_pairs])
-        print(dists[train_pairs][:10], dists[train_pairs][-10:])
         acc_arr.append(eval_acc(t, dists[test_pairs], labels[test_pairs]))
     return np.mean(acc_arr), np.std(acc_arr)
 
@@ -168,8 +196,6 @@ from datasets.lfw import LFWDataset
 high_noise_std_arr = (np.arange(30, 55, 4)/255).tolist()
 low_noise_std_arr = (np.arange(5, 29, 4)/255).tolist()
 
-train_data_dir = "/tmp/CASIA-WebFace-sphereface/"
-
 import torch.nn as nn
 import math
 import torch
@@ -189,6 +215,9 @@ if __name__ == '__main__':
     
     os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
     os.environ["CUDA_VISIBLE_DEVICES"]=args.device
+    
+    im_shape=(112,96)
+    M = generate_mask(im_shape).unsqueeze(0)
     
     faceid = MobileFacenet()
 #     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/sphereface_01.01_high_noise/01.01_sphere20a_40.pth" #trained for high noise
@@ -210,18 +239,15 @@ if __name__ == '__main__':
 #     faceid_ckpt_path = "/home/safin/ms-thesis/ckpt/mobile_04.04/faceid/weights_90"
 
 #     faceid_ckpt_path = "/home/safin/ms-thesis/ckpt/joint_14.04_dnfr/faceid/weights_22"
-#     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_16.04/faceid/weights_90"
-#     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_05.04_bayer/faceid/weights_90"
-    
-    faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_on_noised_bayer_03.05/faceid/weights_25"
-#     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_on_rgb_noised_bayer_03.05/faceid/weights_24"
-
+    faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_16.04/faceid/weights_90"
+#     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_on_bm3d_26.04/faceid/weights_30"
+#     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_on_bm3d_30.04/faceid/weights_40"
     model_state = torch.load(faceid_ckpt_path) 
 #     module_state = torch.load(faceid_ckpt_path)
 #     model_state = OrderedDict()
 #     for k, v in module_state.items():
 #         model_state[k[7:]] = v
-#     faceid.load_state_dict(model_state)
+    faceid.load_state_dict(model_state)
     faceid = faceid.cuda()
 
     basic_transform = transforms.Compose([
@@ -241,9 +267,9 @@ if __name__ == '__main__':
     
     transform = basic_transform #bayer_noised_transform #basic_transform #noise_transform
 #     lfw_data_dir = "/home/safin/datasets/lfw/lfw-sphereface/"
-    lfw_data_dir = "/home/safin/datasets/lfw/lfw-sphereface_noised_bayer"
+    lfw_data_dir = "/home/safin/datasets/lfw/lfw_denoised/"
     lfw_dataset = LFWDataset(lfw_data_dir, "/home/safin/datasets/lfw/pairs.txt", transform, "png")
-    dataloader_test = torch.utils.data.dataloader.DataLoader(lfw_dataset, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=12)
+    dataloader_test = torch.utils.data.dataloader.DataLoader(lfw_dataset, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=12)
     
     print("The number of parameters:", sum(p.numel() for p in faceid.parameters()))
 

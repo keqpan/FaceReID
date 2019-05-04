@@ -88,7 +88,6 @@ class MMNet(torch.nn.Module):
 
         xpre = 0
         for i in range(max_iter):
-            print(i)
             xcur, xpre = self.forward(xcur, xpre, mosaic, M, L, i)
 
         return xcur
@@ -197,7 +196,7 @@ class TBPTT_faceid(torch.nn.Module):
 #             state.requires_grad=True
             xcur, xpre = self.model(state, xpre, mosaic, M, L, i)
     
-        imgs = (xcur - 127.5)/128
+        imgs = (xcur/0.6 - 127.5)/128
         raw_logits = self.faceid_model(imgs)
         outputs = self.ArcMargin(raw_logits, labels)
         faceid_loss = self.faceid_criterion(outputs, labels)
