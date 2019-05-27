@@ -154,7 +154,21 @@ class TBPTT(torch.nn.Module):
                 grads.append(par.grad.data.norm(2).item())
             grads_arr.append(np.sum(grads))
         self.model.zero_grad()
-        return xcur, np.mean(grads_arr)
+        return xcur, np.mean(grads_arr), float(loss)
+
+def linrgb_to_srgb(img):
+    """ Convert linRGB color space to sRGB 
+        https://en.wikipedia.org/wiki/SRGB
+    """
+#     assert img.dtype in [np.float32, np.float64]
+#     if isinstance(img, np.ndarray):
+#         img = img.copy()
+#     elif isinstance(img, torch.Tensor):
+#         img = img.clone()
+    mask = img <= 0.0031308
+    img[~mask] = (img[~mask]**(1/2.4))*(1.055) - 0.055
+    img[mask] = img[mask] * 12.92
+    return img
     
 class TBPTT_faceid(torch.nn.Module):
     def __init__(self, model, faceid_model, loss_module, faceid_criterion, ArcMargin, k1, k2, optimizer, max_iter=20, sigma_max=15, sigma_min=1, clip_grad=0.25):
@@ -195,13 +209,14 @@ class TBPTT_faceid(torch.nn.Module):
 #             state = states[-1][1].detach()
 #             state.requires_grad=True
             xcur, xpre = self.model(state, xpre, mosaic, M, L, i)
-    
-        imgs = (xcur/0.6 - 127.5)/128
+#         xcur = target
+        denoiser_loss = self.loss_module(xcur, target)
+        faceid_input = 255*linrgb_to_srgb(xcur/255)/0.6
+        imgs = (faceid_input - 127.5)/128
         raw_logits = self.faceid_model(imgs)
         outputs = self.ArcMargin(raw_logits, labels)
         faceid_loss = self.faceid_criterion(outputs, labels)
 
-        denoiser_loss = self.loss_module(xcur, target)
         loss = (denoiser_loss + faceid_loss)/num_avg_batches
         if zero_grad:
             self.model.zero_grad()

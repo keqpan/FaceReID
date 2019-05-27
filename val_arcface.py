@@ -9,6 +9,7 @@ import numpy as np
 
 from networks.faceid.sphereface import sphere20a
 from networks.faceid.mobile import MobileFacenet
+from networks.faceid.resnet import resnet_face18
 
 from transforms.noising import GaussianNoise
 from transforms.noising import RawNoiseBayer
@@ -89,8 +90,8 @@ def test_w_denoiser(model, denoiser, test_dataloader, l2dist):
 #         denoised_y = denoiser(data_y, sigma)
 #         denoised_y = (denoised_y-127.5)/127.5
 
-        data_x = (255*data_x - 127.5)/128
-        data_y = (255*data_y - 127.5)/128
+        data_x = (255*data_x-127.5)/128
+        data_y = (255*data_y-127.5)/128
         out_x = model(data_x)
         out_y = model(data_y)
         
@@ -167,6 +168,8 @@ from datasets.lfw import LFWDataset
 high_noise_std_arr = (np.arange(30, 55, 4)/255).tolist()
 low_noise_std_arr = (np.arange(5, 29, 4)/255).tolist()
 
+train_data_dir = "/tmp/CASIA-WebFace-sphereface/"
+
 import torch.nn as nn
 import math
 import torch
@@ -192,7 +195,7 @@ if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
     os.environ["CUDA_VISIBLE_DEVICES"]=args.device
     
-    faceid = MobileFacenet()
+    faceid = resnet_face18(use_se = False)
 #     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/sphereface_01.01_high_noise/01.01_sphere20a_40.pth" #trained for high noise
 #     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/faceid_joint_3stages_20.01_8"
 #     faceid_ckpt_path = "/home/safin/sphereface_pytorch/sphere20a_19.pth"
@@ -218,8 +221,8 @@ if __name__ == '__main__':
 #     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_on_noised_bayer_03.05/faceid/weights_90"
 #     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_on_rgb_noised_bayer_03.05/faceid/weights_90"
 
-#     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_22.05_2/faceid/weights_60"
-    faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobilefacenet_08.05/faceid/weights_60"
+#     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/arcface_13.05/faceid/weights_70"
+    faceid_ckpt_path = "/home/safin/FaceReID/ckpt/arcface_20.05/faceid/weights_70"
 #     faceid_ckpt_path = "068.ckpt"
     model_state = torch.load(faceid_ckpt_path) 
 #     module_state = torch.load(faceid_ckpt_path)
@@ -246,10 +249,10 @@ if __name__ == '__main__':
 
     
     transform = basic_transform #bayer_noised_transform #basic_transform #noise_transform
-    lfw_data_dir = "/home/safin/datasets/lfw/lfw-sphereface/"
-#     lfw_data_dir = "/home/safin/datasets/lfw-112X96/"
+#     lfw_data_dir = "/home/safin/datasets/lfw/lfw-sphereface/"
+    lfw_data_dir = "/home/safin/datasets/lfw-112X96/"
 #     lfw_data_dir = "/home/safin/datasets/lfw/lfw-sphereface_noised_bayer"
-    lfw_dataset = LFWDataset(lfw_data_dir, "/home/safin/datasets/lfw/pairs.txt", transform, "png")
+    lfw_dataset = LFWDataset(lfw_data_dir, "/home/safin/datasets/lfw/pairs.txt", transform, "jpg")
     dataloader_test = torch.utils.data.dataloader.DataLoader(lfw_dataset, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=12)
     
     print("The number of parameters:", sum(p.numel() for p in faceid.parameters()))
@@ -257,7 +260,7 @@ if __name__ == '__main__':
     l2dist = torch.nn.CosineSimilarity().cuda()
     dists, labels = test(faceid, dataloader_test, l2dist)
     
-    print("SphereFace, tested on high noised with denoiser:", k_fold_eval(dists, labels))
+    print("ArcFace, tested:", k_fold_eval(dists, labels))
 
     
     

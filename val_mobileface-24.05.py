@@ -106,7 +106,8 @@ from PIL import Image
 def test(model, dataloader, l2dist):
     model.eval()
     labels_arr = []
-    distances_arr = []
+    fl_arr = []
+    fr_arr = []
     for batch_idx, data in enumerate(dataloader):
         data_x, data_y, data_label = data
         batch_size = data_x.size(0)
@@ -133,21 +134,46 @@ def test(model, dataloader, l2dist):
 #         Image.fromarray((faceid_input[0].permute(1,2,0).cpu().numpy()*255).astype(np.uint8)).save("a.png")
 #         break
         faceid_input = (faceid_input*255 - 127.5)/128
-        out = model(faceid_input)
-        out_dists = l2dist(out[:batch_size], out[batch_size:])
-        distances_arr += out_dists.detach().cpu().numpy().tolist()
+        out = model(faceid_input).detach().cpu()
+        
+        faceid_input_reversed = torch.from_numpy(np.vstack([data_x.numpy()[:,:,:,::-1], data_y.numpy()[:,:,:,::-1]]))
+        faceid_input_reversed = faceid_input_reversed.cuda()
+        faceid_input_reversed = (faceid_input_reversed*255 - 127.5)/128
+        out_reversed = model(faceid_input_reversed).detach().cpu()
+        
+#         out_dists = l2dist(out[:batch_size], out[batch_size:])
+        all_out = torch.cat((out, out_reversed), dim=1).numpy().tolist()
+        fl_arr += all_out[:batch_size]
+        fr_arr += all_out[batch_size:]
         labels_arr += data_label.numpy().tolist()
 
-    return np.asarray(distances_arr), np.asarray(labels_arr)
+    return np.asarray(fl_arr), np.asarray(fr_arr), np.asarray(labels_arr)
 
-def k_fold_eval(dists, labels):
+def k_fold_eval(featureLs, featureRs, labels):
     thresholds = np.arange(-1.0, 1.0, 0.001)
     acc_arr = []
     for pairs in KFold(n=6000, n_folds=10):
         train_pairs, test_pairs = pairs
-        t, _ = find_best(thresholds, dists[train_pairs], labels[train_pairs])
-        acc_arr.append(eval_acc(t, dists[test_pairs], labels[test_pairs]))
+        mu = np.mean(np.concatenate((featureLs[train_pairs, :], featureRs[train_pairs, :]), 0), 0)
+#         print(mu)
+        mu = np.expand_dims(mu, 0)
+        fLs = featureLs - mu
+        fRs = featureRs - mu
+        fLs = fLs / np.expand_dims(np.sqrt(np.sum(np.power(fLs, 2), 1)), 1)
+        fRs = fRs / np.expand_dims(np.sqrt(np.sum(np.power(fRs, 2), 1)), 1)
+        scores = np.sum(np.multiply(fLs, fRs), 1)
+        t, _ = find_best(thresholds, scores[train_pairs], labels[train_pairs])
+        acc_arr.append(eval_acc(t, scores[test_pairs], labels[test_pairs]))
     return np.mean(acc_arr), np.std(acc_arr)
+
+# def k_fold_eval(dists, labels):
+#     thresholds = np.arange(-1.0, 1.0, 0.001)
+#     acc_arr = []
+#     for pairs in KFold(n=6000, n_folds=10):
+#         train_pairs, test_pairs = pairs
+#         t, _ = find_best(thresholds, dists[train_pairs], labels[train_pairs])
+#         acc_arr.append(eval_acc(t, dists[test_pairs], labels[test_pairs]))
+#     return np.mean(acc_arr), np.std(acc_arr)
 
 def eval_acc(threshold, dists, labels):
     accuracy = ((dists > threshold) == labels).mean()
@@ -218,7 +244,8 @@ if __name__ == '__main__':
 #     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_on_noised_bayer_03.05/faceid/weights_90"
 #     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_on_rgb_noised_bayer_03.05/faceid/weights_90"
 
-#     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_22.05_2/faceid/weights_60"
+#     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_24.05/faceid/weights_65"
+#     faceid_ckpt_path = "/home/safin/MobileFaceNet_Pytorch/model/CASIA_B512_v2_20190525_122850/060.ckpt"
     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobilefacenet_08.05/faceid/weights_60"
 #     faceid_ckpt_path = "068.ckpt"
     model_state = torch.load(faceid_ckpt_path) 
@@ -247,7 +274,7 @@ if __name__ == '__main__':
     
     transform = basic_transform #bayer_noised_transform #basic_transform #noise_transform
     lfw_data_dir = "/home/safin/datasets/lfw/lfw-sphereface/"
-#     lfw_data_dir = "/home/safin/datasets/lfw-112X96/"
+#     lfw_data_dir = "/home/safin/datasets/lfw-112X96_png/"
 #     lfw_data_dir = "/home/safin/datasets/lfw/lfw-sphereface_noised_bayer"
     lfw_dataset = LFWDataset(lfw_data_dir, "/home/safin/datasets/lfw/pairs.txt", transform, "png")
     dataloader_test = torch.utils.data.dataloader.DataLoader(lfw_dataset, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=12)
@@ -255,9 +282,9 @@ if __name__ == '__main__':
     print("The number of parameters:", sum(p.numel() for p in faceid.parameters()))
 
     l2dist = torch.nn.CosineSimilarity().cuda()
-    dists, labels = test(faceid, dataloader_test, l2dist)
+    fl, fr, labels = test(faceid, dataloader_test, l2dist)
     
-    print("SphereFace, tested on high noised with denoiser:", k_fold_eval(dists, labels))
+    print("MobileFaceNet, tested:", k_fold_eval(fl, fr, labels))
 
     
     

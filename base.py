@@ -1,9 +1,20 @@
 import os
 from common import CKPT_DIR, LOGS_DIR
-from utils import save_model, load_model
+from utils import save_model, load_model, dt
 import numpy as np
 
 stop_flag = False
+main_pid = os.getpid()
+def handler(signum, frame):
+    if main_pid == os.getpid():
+        print("Shutting down at " + dt() + " ...")
+        global stop_flag
+        stop_flag = True
+
+import signal
+# signal.signal(signal.SIGTERM, handler) for 15 signal
+signal.signal(signal.SIGINT, handler)
+
 
 class BaseExpRunner():
     def __init__(self, name, models_dict, schedulers_dict, optimizers_dict, losses_dict, log_names, multigpu_mode=False):

@@ -204,12 +204,13 @@ if __name__ == '__main__':
     denoiser = ResNet_Den(5, weightnorm=True)
     denoiser = denoiser.cuda()
     
-    max_iter = 10
+    max_iter = 5
     mmnet = MMNet(denoiser, max_iter=max_iter)
 #     mmnet_ckpt_path = "/home/safin/ms-thesis/ckpt/joint_15.04_dnfr/denoiser/weights_15"
 #     mmnet_ckpt_path = "/home/safin/ms-thesis/ckpt/resdnet_09.04/denoiser/weights_90"
     mmnet_ckpt_path = "/home/safin/ms-thesis/ckpt/20.04_resdnet_5it/denoiser/weights_200"
-    mmnet_ckpt_path = "/home/safin/FaceReID/ckpt/joint_20.04/mmnet/weights_38"
+#     mmnet_ckpt_path = "/home/safin/FaceReID/ckpt/joint_20.04/mmnet/weights_38"
+    mmnet_ckpt_path = "/home/safin/FaceReID/ckpt/joint_15.05/mmnet/weights_10"
     mmnet = load_model(mmnet, mmnet_ckpt_path, multigpu_mode = False)
     mmnet.eval()
 
@@ -219,6 +220,7 @@ if __name__ == '__main__':
 #     faceid_ckpt_path = "/home/safin/ms-thesis/ckpt/mobile_04.04/faceid/weights_90"
     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_16.04/faceid/weights_90"
     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/joint_20.04/faceid/weights_38"
+    faceid_ckpt_path = "/home/safin/FaceReID/ckpt/joint_15.05/faceid/weights_10"
     model_state = torch.load(faceid_ckpt_path)
 #     module_state = torch.load(faceid_ckpt_path)
 #     model_state = OrderedDict()
