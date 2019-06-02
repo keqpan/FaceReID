@@ -245,7 +245,8 @@ if __name__ == '__main__':
 #     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_on_rgb_noised_bayer_03.05/faceid/weights_90"
 
 #     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_24.05/faceid/weights_65"
-#     faceid_ckpt_path = "/home/safin/MobileFaceNet_Pytorch/model/CASIA_B512_v2_20190525_122850/060.ckpt"
+#     faceid_ckpt_path = "/home/safin/MobileFaceNet_Pytorch/model/CASIA_B512_v2_20190525_122850/070.ckpt"
+#     faceid_ckpt_path = "/home/safin/MobileFaceNet_Pytorch/model/CASIA_B512_26.05v2_20190526_002219/070.ckpt"
     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobilefacenet_08.05/faceid/weights_60"
 #     faceid_ckpt_path = "068.ckpt"
     model_state = torch.load(faceid_ckpt_path) 
@@ -260,21 +261,21 @@ if __name__ == '__main__':
     basic_transform = transforms.Compose([
                              transforms.ToTensor()
                          ])
-    noise_transform = transforms.Compose([
-                             transforms.ToTensor(),
-                             GaussianNoise(high_noise_std_arr, clamp=[0,1])
-                         ])
-    a = 0.15
-    b = 0.15
-    bayer_noised_transform = transforms.Compose([
-                             RawNoiseBayer(a, b, 0.7, 0.6),
-                             transforms.ToTensor()
-                         ])
+#     noise_transform = transforms.Compose([
+#                              transforms.ToTensor(),
+#                              GaussianNoise(high_noise_std_arr, clamp=[0,1])
+#                          ])
+#     a = 0.15
+#     b = 0.15
+#     bayer_noised_transform = transforms.Compose([
+#                              RawNoiseBayer(a, b, 0.7, 0.6),
+#                              transforms.ToTensor()
+#                          ])
 
     
     transform = basic_transform #bayer_noised_transform #basic_transform #noise_transform
     lfw_data_dir = "/home/safin/datasets/lfw/lfw-sphereface/"
-#     lfw_data_dir = "/home/safin/datasets/lfw-112X96_png/"
+#     lfw_data_dir = "/home/safin/datasets/lfw_png/lfw-112X96/"
 #     lfw_data_dir = "/home/safin/datasets/lfw/lfw-sphereface_noised_bayer"
     lfw_dataset = LFWDataset(lfw_data_dir, "/home/safin/datasets/lfw/pairs.txt", transform, "png")
     dataloader_test = torch.utils.data.dataloader.DataLoader(lfw_dataset, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=12)

@@ -351,7 +351,7 @@ class MSRMyDemosaicDataset(Dataset):
 class DemosaicDataset(torch.utils.data.Dataset):
     """Demosaic dataset."""
 
-    def __init__(self, root_dir, transform=None, pattern='bayer_rggb'):
+    def __init__(self, root_dir, transform=None, pattern='bayer_rggb', gt_dir_name="gt", bayer_dir_name="noised_bayer"):
         """
         Args:
             root_dir (string): Directory with all the images.
@@ -362,8 +362,8 @@ class DemosaicDataset(torch.utils.data.Dataset):
         """
         self.root_dir = root_dir
         self.transform = transform
-        self.groundtruth = os.path.join(self.root_dir, 'gt/')
-        self.bayer = os.path.join(self.root_dir, 'noised_bayer/')
+        self.groundtruth = os.path.join(self.root_dir, gt_dir_name)
+        self.bayer = os.path.join(self.root_dir, bayer_dir_name)
         
         self.listfiles = []
         classes_folders = sorted(os.listdir(self.groundtruth))
