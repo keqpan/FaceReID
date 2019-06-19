@@ -186,8 +186,9 @@ if __name__ == '__main__':
 #     mmnet_ckpt_path = "/home/safin/FaceReID/ckpt/joint_20.04/mmnet/weights_38"
 #     mmnet_ckpt_path = "/home/safin/ms-thesis/ckpt/20.04_resdnet_5it/denoiser/weights_200"
 #     mmnet_ckpt_path = "/home/safin/FaceReID/ckpt/joint_15.05/mmnet/weights_10"
-    mmnet_ckpt_path = "/home/safin/FaceReID/ckpt/mmnet_5it_26.05_3/mmnet/weights_299"
+#     mmnet_ckpt_path = "/home/safin/FaceReID/ckpt/mmnet_5it_26.05_3/mmnet/weights_299"
 #     mmnet_ckpt_path = "/home/safin/FaceReID/ckpt/joint_27.05_faceid-fr/mmnet/weights_10"
+    mmnet_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_joint_29.05/mmnet/weights_22"
     
     mmnet = load_model(mmnet, mmnet_ckpt_path, multigpu_mode = False)
     mmnet.eval()
@@ -200,9 +201,11 @@ if __name__ == '__main__':
 #     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_16.04/faceid/weights_90"
 #     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/joint_20.04/faceid/weights_38"
 #     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/joint_15.05/faceid/weights_10"
-    faceid_ckpt_path = "/home/safin/FaceReID/ckpt/test/faceid/weights_70"
+#     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/test/faceid/weights_70"
 #     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_27.05_on_mmnet/faceid/weights_70"
 #     faceid_ckpt_path = "/home/safin/FaceReID/ckpt/joint_27.05_faceid-fr/faceid/weights_10"
+    faceid_ckpt_path = "/home/safin/FaceReID/ckpt/mobile_joint_29.05/faceid/weights_22"
+
     model_state = torch.load(faceid_ckpt_path)
 #     module_state = torch.load(faceid_ckpt_path)
 #     model_state = OrderedDict()
@@ -228,8 +231,9 @@ if __name__ == '__main__':
                          ])
 
     
-    transform = bayer_noised_transform #basic_transform #noise_transform
+    transform = basic_transform #noise_transform #bayer_noised_transform #
     lfw_data_dir = "/home/safin/datasets/lfw/lfw-sphereface/"
+    lfw_data_dir = "/home/safin/datasets/lfw/lfw-sphereface_noised_bayer"
     lfw_dataset = LFWDataset(lfw_data_dir, "/home/safin/datasets/lfw/pairs.txt", transform, "png")
     dataloader_test = torch.utils.data.dataloader.DataLoader(lfw_dataset, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=12)
     
